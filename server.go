@@ -8,7 +8,7 @@ import (
 	"image/png"
 	"log"
 	"net/http"
-	//"github.com/disintegration/imaging"
+	"github.com/disintegration/imaging"
 	"strconv"
 )
 
@@ -49,6 +49,22 @@ func encodeImage(srcImage image.Image, format string) *bytes.Buffer {
 	return buffer
 }
 
+func scaleImage(srcImage image.Image, width int, height int) image.Image {
+	if width != 0 && height != 0 {
+		return imaging.Fit(srcImage, width, height, imaging.Lanczos)
+	}
+
+	if width == 0 && height != 0 {
+		return imaging.Resize(srcImage, 0, height, imaging.Lanczos)
+	}
+
+	if height == 0 && width != 0 {
+		return imaging.Resize(srcImage, width, 0, imaging.Lanczos)
+	}
+
+	return srcImage
+}
+
 func writeImage(writer http.ResponseWriter, buffer *bytes.Buffer) {
 	writer.Header().Set("Content-Type", "image/jpeg")
 	writer.Header().Set("Content-Length", strconv.Itoa(len(buffer.Bytes())))
@@ -62,21 +78,21 @@ func writeImage(writer http.ResponseWriter, buffer *bytes.Buffer) {
 func index(writer http.ResponseWriter, response *http.Request) {
 	baseUrl := "https://enavtika.si"
 	imageUrl := baseUrl + response.URL.Path
-	format := response.URL.Query().Get("format")
-	fmt.Println(imageUrl + ", Format: " + format)
+	fmt.Println(imageUrl)
 
 	srcImage := loadImage(imageUrl)
 	if srcImage == nil {
 		fmt.Fprint(writer, "No image found at URL: "+imageUrl)
 	}
 
-	bufferedImage := encodeImage(srcImage, "png")
+	width, _ := strconv.ParseInt(response.URL.Query().Get("width"), 10, 16)
+	height, _ := strconv.ParseInt(response.URL.Query().Get("height"), 10, 16)
+	scaledImage := scaleImage(srcImage, int(width), int(height))
 
-	//transformedImage := imaging.Resize(srcImage, 128, 128, imaging.Lanczos)
+	format := response.URL.Query().Get("format")
+	encodedImage := encodeImage(scaledImage, format)
 
-	writeImage(writer, bufferedImage)
-
-	fmt.Fprint(writer, response.URL.Path)
+	writeImage(writer, encodedImage)
 }
 
 func main() {
