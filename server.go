@@ -7,7 +7,7 @@ import (
 	"image/jpeg"
 	"log"
 	"net/http"
-	"github.com/disintegration/imaging"
+	//"github.com/disintegration/imaging"
 	"strconv"
 )
 
@@ -47,14 +47,16 @@ func writeImage(writer http.ResponseWriter, srcImage image.Image) {
 func index(writer http.ResponseWriter, response *http.Request)  {
 	baseUrl := "https://enavtika.si"
 	imageUrl := baseUrl + response.URL.Path
+	fmt.Println(imageUrl)
+
 	srcImage := loadImage(imageUrl)
 	if srcImage == nil {
 		fmt.Fprint(writer, "No image found at URL: " + imageUrl)
 	}
 
-	transformedImage := imaging.Resize(srcImage, 128, 128, imaging.Lanczos)
+	//transformedImage := imaging.Resize(srcImage, 128, 128, imaging.Lanczos)
 
-	writeImage(writer, transformedImage)
+	writeImage(writer, srcImage)
 
 	fmt.Fprint(writer, response.URL.Path)
 }
