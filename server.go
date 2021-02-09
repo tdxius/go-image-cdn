@@ -61,11 +61,12 @@ func index(writer http.ResponseWriter, response *http.Request)  {
 	fmt.Fprint(writer, response.URL.Path)
 }
 
-func handleRequests() {
-	http.HandleFunc("/", index)
-	log.Fatal(http.ListenAndServe(":80", nil))
-}
 
 func main() {
-	handleRequests()
+	http.HandleFunc("/", index)
+	fmt.Println("Web server is listening on port 80")
+	serverError := http.ListenAndServe(":80", nil)
+	if serverError != nil {
+		fmt.Println("Failed to start web server on port 80.")
+	}
 }
