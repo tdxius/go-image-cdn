@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
+	"image/png"
 	"log"
 	"net/http"
 	//"github.com/disintegration/imaging"
@@ -28,13 +29,27 @@ func loadImage(url string) image.Image {
 	return remoteImage
 }
 
-func writeImage(writer http.ResponseWriter, srcImage image.Image) {
+func encodeImage(srcImage image.Image, format string) *bytes.Buffer {
 	buffer := new(bytes.Buffer)
-	encodeError := jpeg.Encode(buffer, srcImage, nil)
-	if encodeError != nil {
-		log.Println("unable to encode image.")
+	var encodingError error
+
+	switch format {
+	case "jpeg":
+		encodingError = jpeg.Encode(buffer, srcImage, nil)
+	case "png":
+		encodingError = png.Encode(buffer, srcImage)
+	default:
+		encodingError = jpeg.Encode(buffer, srcImage, nil)
 	}
 
+	if encodingError != nil {
+		fmt.Println("Unable to encode image: " + encodingError.Error())
+	}
+
+	return buffer
+}
+
+func writeImage(writer http.ResponseWriter, buffer *bytes.Buffer) {
 	writer.Header().Set("Content-Type", "image/jpeg")
 	writer.Header().Set("Content-Length", strconv.Itoa(len(buffer.Bytes())))
 
@@ -44,23 +59,25 @@ func writeImage(writer http.ResponseWriter, srcImage image.Image) {
 	}
 }
 
-func index(writer http.ResponseWriter, response *http.Request)  {
+func index(writer http.ResponseWriter, response *http.Request) {
 	baseUrl := "https://enavtika.si"
 	imageUrl := baseUrl + response.URL.Path
-	fmt.Println(imageUrl)
+	format := response.URL.Query().Get("format")
+	fmt.Println(imageUrl + ", Format: " + format)
 
 	srcImage := loadImage(imageUrl)
 	if srcImage == nil {
-		fmt.Fprint(writer, "No image found at URL: " + imageUrl)
+		fmt.Fprint(writer, "No image found at URL: "+imageUrl)
 	}
+
+	bufferedImage := encodeImage(srcImage, "png")
 
 	//transformedImage := imaging.Resize(srcImage, 128, 128, imaging.Lanczos)
 
-	writeImage(writer, srcImage)
+	writeImage(writer, bufferedImage)
 
 	fmt.Fprint(writer, response.URL.Path)
 }
-
 
 func main() {
 	http.HandleFunc("/", index)
