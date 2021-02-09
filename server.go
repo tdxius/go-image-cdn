@@ -1,13 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"image"
 	"image/jpeg"
 	"log"
 	"net/http"
-	"os"
 	"github.com/disintegration/imaging"
+	"strconv"
 )
 
 func loadImage(url string) image.Image {
@@ -27,13 +28,20 @@ func loadImage(url string) image.Image {
 	return remoteImage
 }
 
-func saveImage(srcImage image.Image) {
-	f, err := os.Create("img.jpg")
-	if err != nil {
-		panic(err)
+func writeImage(writer http.ResponseWriter, srcImage image.Image) {
+	buffer := new(bytes.Buffer)
+	encodeError := jpeg.Encode(buffer, srcImage, nil)
+	if encodeError != nil {
+		log.Println("unable to encode image.")
 	}
-	defer f.Close()
-	jpeg.Encode(f, srcImage, nil)
+
+	writer.Header().Set("Content-Type", "image/jpeg")
+	writer.Header().Set("Content-Length", strconv.Itoa(len(buffer.Bytes())))
+
+	_, writeError := writer.Write(buffer.Bytes())
+	if writeError != nil {
+		log.Println("unable to write image.")
+	}
 }
 
 func index(writer http.ResponseWriter, response *http.Request)  {
@@ -42,9 +50,7 @@ func index(writer http.ResponseWriter, response *http.Request)  {
 
 	transformedImage := imaging.Resize(srcImage, 128, 128, imaging.Lanczos)
 
-	saveImage(transformedImage)
-
-	fmt.Fprint(writer, "Homepage endpoint hit 1")
+	writeImage(writer, transformedImage)
 }
 
 func handleRequests() {
