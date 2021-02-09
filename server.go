@@ -7,7 +7,7 @@ import (
 	"image/jpeg"
 	"log"
 	"net/http"
-	//"github.com/disintegration/imaging"
+	"github.com/disintegration/imaging"
 	"strconv"
 )
 
@@ -52,9 +52,9 @@ func index(writer http.ResponseWriter, response *http.Request)  {
 		fmt.Fprint(writer, "No image found at URL: " + imageUrl)
 	}
 
-	//transformedImage := imaging.Resize(srcImage, 128, 128, imaging.Lanczos)
+	transformedImage := imaging.Resize(srcImage, 128, 128, imaging.Lanczos)
 
-	writeImage(writer, srcImage)
+	writeImage(writer, transformedImage)
 
 	fmt.Fprint(writer, response.URL.Path)
 }
