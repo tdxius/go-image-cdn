@@ -8,6 +8,6 @@ services:
       - 3000:80
     volumes:
       - .:/app
-    command: go run server.go go
+    command: go run ./ go
     stdin_open: true
     tty: true
