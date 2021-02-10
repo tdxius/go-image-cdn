@@ -7,6 +7,10 @@ Image CDN built using Golang.
 ``` bash
 git clone https://github.com/tdxius/go-image-cdn
 cd go-image-cdn
+
+cp .env.example .env
+# edit .env config
+
 make run
 ```
 
