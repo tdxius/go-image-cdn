@@ -13,8 +13,8 @@ import (
 	"time"
 )
 
-func imageResponse(writer http.ResponseWriter, buffer *bytes.Buffer) {
-	writer.Header().Set("Content-Type", "image/jpeg")
+func imageResponse(writer http.ResponseWriter, buffer *bytes.Buffer, format string) {
+	writer.Header().Set("Content-Type", "image/" + format)
 	writer.Header().Set("Content-Length", strconv.Itoa(len(buffer.Bytes())))
 
 	_, writeError := writer.Write(buffer.Bytes())
@@ -50,9 +50,13 @@ func index(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	width, height, format := getQueryParams(request)
+	if format == "" {
+		format = deliverableImage.format
+	}
+
 	bufferedImage := deliverableImage.scale(width, height).encode(format)
 
-	imageResponse(writer, bufferedImage)
+	imageResponse(writer, bufferedImage, format)
 
 	duration := int(time.Now().Sub(startTime).Milliseconds())
 	fmt.Println(strconv.Itoa(duration) + "ms")

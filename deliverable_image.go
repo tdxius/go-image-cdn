@@ -7,9 +7,6 @@ import (
 	"github.com/disintegration/imaging"
 	"github.com/patrickmn/go-cache"
 	"image"
-	"image/gif"
-	"image/jpeg"
-	"image/png"
 	"net/http"
 	"net/http/httputil"
 	"strings"
@@ -81,16 +78,22 @@ func (image DeliverableImage) scale(width int, height int) DeliverableImage {
 func (image DeliverableImage) encode(format string) *bytes.Buffer {
 	buffer := new(bytes.Buffer)
 
-	switch format {
+	switch strings.ToLower(format) {
 	case "jpeg", "jpg":
-		_ = jpeg.Encode(buffer, image.source, nil)
+		_ = imaging.Encode(buffer, image.source, imaging.JPEG)
 	case "png":
-		_ = png.Encode(buffer, image.source)
+		_ = imaging.Encode(buffer, image.source, imaging.PNG)
+	case "tiff", "tif":
+		_ = imaging.Encode(buffer, image.source, imaging.TIFF)
+	case "bmp":
+		_ = imaging.Encode(buffer, image.source, imaging.BMP)
 	case "gif":
-		_ = gif.Encode(buffer, image.source, nil)
+		_ = imaging.Encode(buffer, image.source, imaging.GIF)
 	default:
 		buffer = image.encode(image.format)
 	}
+
+	image.format = strings.ToLower(format)
 
 	return buffer
 }
