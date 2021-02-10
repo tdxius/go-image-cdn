@@ -1,14 +1,19 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
+	"fmt"
 	"github.com/disintegration/imaging"
+	"github.com/patrickmn/go-cache"
 	"image"
 	"image/gif"
 	"image/jpeg"
 	"image/png"
 	"net/http"
+	"net/http/httputil"
 	"strings"
+	"time"
 )
 
 type DeliverableImage struct {
@@ -16,20 +21,38 @@ type DeliverableImage struct {
 	format string
 }
 
-func NewDeliverableImageFromUrl(url string) *DeliverableImage {
+func cacheOrFetchResponse(url string) *http.Response {
+	cacher := cache.New(time.Hour, 2*time.Hour)
+	cachedResponse, found := cacher.Get(url)
+	if found {
+		reader := bufio.NewReader(bytes.NewReader(cachedResponse.([]byte)))
+		response, _ := http.ReadResponse(reader, nil)
+		return response
+	}
+
 	response, httpError := http.Get(url)
 	if httpError != nil {
 		return nil
 	}
 	defer response.Body.Close()
 
+	responseBody, _ := httputil.DumpResponse(response, true)
+	cacher.Set(url, responseBody, time.Hour)
+
+	return response
+}
+
+func NewDeliverableImageFromUrl(url string) *DeliverableImage {
+	response := cacheOrFetchResponse(url)
 	contentType := response.Header.Get("Content-Type")
+
 	if !strings.HasPrefix(contentType, "image/") {
 		return nil
 	}
 
 	remoteImage, _, decodingError := image.Decode(response.Body)
 	if decodingError != nil {
+		fmt.Println(decodingError)
 		return nil
 	}
 
