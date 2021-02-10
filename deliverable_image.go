@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/disintegration/imaging"
 	"image"
 	"image/gif"

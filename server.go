@@ -2,12 +2,15 @@ package main
 
 import (
 	"github.com/joho/godotenv"
+	"github.com/victorspringer/http-cache"
+	"github.com/victorspringer/http-cache/adapter/memory"
 	"bytes"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 )
 
 func imageResponse(writer http.ResponseWriter, buffer *bytes.Buffer) {
@@ -33,6 +36,8 @@ func getQueryParams(request *http.Request) (width int, height int, format string
 }
 
 func index(writer http.ResponseWriter, request *http.Request) {
+	startTime := time.Now()
+
 	baseUrl := os.Getenv("SOURCE_URL")
 	imageUrl := baseUrl + request.URL.Path
 	fmt.Println(imageUrl)
@@ -48,15 +53,48 @@ func index(writer http.ResponseWriter, request *http.Request) {
 	bufferedImage := deliverableImage.scale(width, height).encode(format)
 
 	imageResponse(writer, bufferedImage)
+
+	duration := int(time.Now().Sub(startTime).Milliseconds())
+	fmt.Println(strconv.Itoa(duration) + "ms")
 }
 
-func main() {
+func initDotenv() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
+}
 
-	http.HandleFunc("/", index)
+func createCacheClient() *cache.Client {
+	memcached, err := memory.NewAdapter(
+		memory.AdapterWithAlgorithm(memory.LRU),
+		memory.AdapterWithCapacity(10000000),
+	)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	cacheClient, err := cache.NewClient(
+		cache.ClientWithAdapter(memcached),
+		cache.ClientWithTTL(10 * time.Minute),
+		cache.ClientWithRefreshKey("opn"),
+	)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	return cacheClient
+}
+
+func main() {
+	initDotenv()
+	cacheClient := createCacheClient()
+
+	handler := http.HandlerFunc(index)
+
+	http.Handle("/", cacheClient.Middleware(handler))
 
 	fmt.Println("Web server is listening on port 80")
 	serverError := http.ListenAndServe(":80", nil)
