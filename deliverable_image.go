@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/disintegration/imaging"
 	"image"
 	"image/gif"
@@ -66,7 +67,7 @@ func (image DeliverableImage) encode(format string) *bytes.Buffer {
 	case "gif":
 		_ = gif.Encode(buffer, image.source, nil)
 	default:
-		image.encode(image.format)
+		buffer = image.encode(image.format)
 	}
 
 	return buffer

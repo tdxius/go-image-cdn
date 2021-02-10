@@ -1,10 +1,12 @@
 package main
 
 import (
+	"github.com/joho/godotenv"
 	"bytes"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 )
 
@@ -31,7 +33,7 @@ func getQueryParams(request *http.Request) (width int, height int, format string
 }
 
 func index(writer http.ResponseWriter, request *http.Request) {
-	baseUrl := "https://enavtika.si"
+	baseUrl := os.Getenv("SOURCE_URL")
 	imageUrl := baseUrl + request.URL.Path
 	fmt.Println(imageUrl)
 
@@ -49,6 +51,11 @@ func index(writer http.ResponseWriter, request *http.Request) {
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	http.HandleFunc("/", index)
 
 	fmt.Println("Web server is listening on port 80")

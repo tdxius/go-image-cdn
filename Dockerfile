@@ -8,8 +8,7 @@ WORKDIR $APP_HOME
 COPY go.mod .
 COPY go.sum .
 
-RUN go get ./
-RUN go build
+RUN go mod download
 
 EXPOSE 80
 
