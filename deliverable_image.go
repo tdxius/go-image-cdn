@@ -18,8 +18,9 @@ type DeliverableImage struct {
 	format string
 }
 
+var cacher = cache.New(time.Hour, 2*time.Hour)
+
 func cacheOrFetchResponse(url string) *http.Response {
-	cacher := cache.New(time.Hour, 2*time.Hour)
 	cachedResponse, found := cacher.Get(url)
 	if found {
 		reader := bufio.NewReader(bytes.NewReader(cachedResponse.([]byte)))

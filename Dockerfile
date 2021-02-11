@@ -10,6 +10,6 @@ COPY go.sum .
 
 RUN go mod download
 
-EXPOSE 80
+EXPOSE 8080
 
 COPY . $APP_HOME%

@@ -1,65 +1,45 @@
 package main
 
 import (
-	"github.com/joho/godotenv"
-	"github.com/victorspringer/http-cache"
-	"github.com/victorspringer/http-cache/adapter/memory"
 	"bytes"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"log"
-	"net/http"
 	"os"
 	"strconv"
-	"time"
 )
 
-func imageResponse(writer http.ResponseWriter, buffer *bytes.Buffer, format string) {
-	writer.Header().Set("Content-Type", "image/" + format)
-	writer.Header().Set("Content-Length", strconv.Itoa(len(buffer.Bytes())))
+func main() {
+	initDotenv()
 
-	_, writeError := writer.Write(buffer.Bytes())
-	if writeError != nil {
-		log.Println("unable to write source.")
-	}
+	router := gin.Default()
+	router.GET("/*path", index)
+	router.Run()
 }
 
-func getQueryParamAsInt(request *http.Request, key string) int {
-	value, _ := strconv.ParseInt(request.URL.Query().Get(key), 10, 16)
-	return int(value)
-}
-
-func getQueryParams(request *http.Request) (width int, height int, format string) {
-	width = getQueryParamAsInt(request, "width")
-	height = getQueryParamAsInt(request, "height")
-	format = request.URL.Query().Get("format")
-	return
-}
-
-func index(writer http.ResponseWriter, request *http.Request) {
-	startTime := time.Now()
-
+func index(context *gin.Context) {
 	baseUrl := os.Getenv("SOURCE_URL")
-	imageUrl := baseUrl + request.URL.Path
+	imageUrl := baseUrl + context.Request.URL.Path
 	fmt.Println(imageUrl)
 
 	deliverableImage := NewDeliverableImageFromUrl(imageUrl)
 	if deliverableImage == nil {
 		fmt.Println("No image found at URL: " + imageUrl)
-		writer.WriteHeader(404)
+		context.AbortWithStatus(404)
 		return
 	}
 
-	width, height, format := getQueryParams(request)
+	width := convertStringToInt(context.Query("width"))
+	height := convertStringToInt(context.Query("height"))
+	format := context.Query("format")
 	if format == "" {
 		format = deliverableImage.format
 	}
 
 	bufferedImage := deliverableImage.scale(width, height).encode(format)
 
-	imageResponse(writer, bufferedImage, format)
-
-	duration := int(time.Now().Sub(startTime).Milliseconds())
-	fmt.Println(strconv.Itoa(duration) + "ms")
+	imageResponse(context, bufferedImage, format)
 }
 
 func initDotenv() {
@@ -69,40 +49,19 @@ func initDotenv() {
 	}
 }
 
-func createCacheClient() *cache.Client {
-	memcached, err := memory.NewAdapter(
-		memory.AdapterWithAlgorithm(memory.LRU),
-		memory.AdapterWithCapacity(10000000),
-	)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	cacheClient, err := cache.NewClient(
-		cache.ClientWithAdapter(memcached),
-		cache.ClientWithTTL(10 * time.Minute),
-		cache.ClientWithRefreshKey("opn"),
-	)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	return cacheClient
+func convertStringToInt(string string) int {
+	value, _ := strconv.ParseInt(string, 10, 16)
+	return int(value)
 }
 
-func main() {
-	initDotenv()
-	cacheClient := createCacheClient()
+func imageResponse(context *gin.Context, buffer *bytes.Buffer, format string) {
+	context.Writer.WriteHeader(200)
+	context.Writer.Header().Set("Content-Type", "image/" + format)
+	context.Writer.Header().Set("Content-Length", strconv.Itoa(len(buffer.Bytes())))
 
-	handler := http.HandlerFunc(index)
-
-	http.Handle("/", cacheClient.Middleware(handler))
-
-	fmt.Println("Web server is listening on port 80")
-	serverError := http.ListenAndServe(":80", nil)
-	if serverError != nil {
-		fmt.Println("Failed to start web server on port 80.")
+	_, writeError := context.Writer.Write(buffer.Bytes())
+	if writeError != nil {
+		log.Println("unable to write source.")
 	}
+	context.Writer.WriteHeaderNow()
 }
