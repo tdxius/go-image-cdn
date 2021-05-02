@@ -6,8 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"log"
-	"os"
 	"strconv"
+	"strings"
 )
 
 func main() {
@@ -19,8 +19,7 @@ func main() {
 }
 
 func index(context *gin.Context) {
-	baseUrl := os.Getenv("SOURCE_URL")
-	imageUrl := baseUrl + context.Request.URL.Path
+	imageUrl := strings.TrimLeft(context.Request.URL.Path, "/")
 	fmt.Println(imageUrl)
 
 	deliverableImage := NewDeliverableImageFromUrl(imageUrl)
